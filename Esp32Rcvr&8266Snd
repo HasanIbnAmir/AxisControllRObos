@@ -1,0 +1,45 @@
+#include <WiFi.h>
+#include <esp_now.h>
+
+// Struct to receive data from ESP8266
+struct Data {
+  float accelX;
+  float accelY;
+} receivedData;
+
+// Callback for ESP-NOW receive (ESP32 Core 3.x style)
+void onDataReceive(const esp_now_recv_info_t *info, const uint8_t *incomingData, int len) {
+  if (len != sizeof(Data)) return;
+
+  memcpy(&receivedData, incomingData, sizeof(receivedData));
+
+  char macStr[18];
+  snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
+           info->src_addr[0], info->src_addr[1], info->src_addr[2],
+           info->src_addr[3], info->src_addr[4], info->src_addr[5]);
+
+  Serial.print("From MAC: ");
+  Serial.print(macStr);
+  Serial.print(" -> X: ");
+  Serial.print(receivedData.accelX, 3);
+  Serial.print(" | Y: ");
+  Serial.println(receivedData.accelY, 3);
+}
+
+void setup() {
+  Serial.begin(9600);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.disconnect(); // Ensure not connected to Wi-Fi
+
+  if (esp_now_init() != ESP_OK) {
+    Serial.println("ESP-NOW initialization failed!");
+    return;
+  }
+
+  esp_now_register_recv_cb(onDataReceive);
+}
+
+void loop() {
+  // Nothing here – ESP-NOW is event-driven
+}
